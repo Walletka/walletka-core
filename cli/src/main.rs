@@ -30,7 +30,7 @@ enum Commands {
     Balance { currency_symbol: Option<String> },
     Contacts,
     ImportContacts { npub: String },
-    DeleteContact { npub: String },
+    DeleteContact { contact_id: String },
 }
 
 #[tokio::main]
@@ -98,8 +98,8 @@ async fn main() -> Result<()> {
         Commands::ImportContacts { npub } => {
             walletka.import_contacts_from_npub(npub).await?;
         }
-        Commands::DeleteContact { npub } => {
-            //walletka.delete_contact(npub);
+        Commands::DeleteContact { contact_id } => {
+            walletka.delete_contact_by_id(contact_id).await?;
         }
     };
 

@@ -9,7 +9,7 @@ pub struct ContactsRepository<C>
 where
     C: Connection,
 {
-    database: Surreal<C>,
+    db: Surreal<C>,
 }
 
 impl<C> ContactsRepository<C>
@@ -17,28 +17,34 @@ where
     C: Connection,
 {
     pub fn new(database: Surreal<C>) -> Self {
-        Self { database }
+        Self { db: database }
     }
 
     pub async fn add(&self, contact: WalletkaContact) -> Result<WalletkaContact> {
-        let created: Vec<WalletkaContact> =
-            self.database.create(TABLE_NAME).content(contact).await?;
+        let created: Vec<WalletkaContact> = self.db.create(TABLE_NAME).content(contact).await?;
 
         Ok(created.into_iter().last().unwrap())
     }
 
     pub async fn get_all(&self) -> Result<Vec<WalletkaContact>> {
-        let contacts: Vec<WalletkaContact> = self.database.select(TABLE_NAME).await?;
+        let contacts: Vec<WalletkaContact> = self.db.select(TABLE_NAME).await?;
 
         Ok(contacts)
     }
 
     pub async fn delete(&self, contact: WalletkaContact) -> Result<()> {
-        let _: Option<WalletkaContact> = self
-            .database
-            .delete((TABLE_NAME, contact.id.unwrap().id))
-            .await?;
+        let _: Option<WalletkaContact> =
+            self.db.delete((TABLE_NAME, contact.id.unwrap().id)).await?;
         Ok(())
+    }
+
+    pub async fn get_by_id(&self, id: &str) -> Result<WalletkaContact> {
+        let contact: Option<WalletkaContact> = self.db.select((TABLE_NAME, id)).await?;
+
+        match contact {
+            Some(contact) => Ok(contact),
+            None => bail!("COntact with id {} not found", id),
+        }
     }
 
     pub async fn update(&self, contact: WalletkaContact) -> Result<WalletkaContact> {
@@ -47,11 +53,8 @@ where
             None => bail!("No id provided"),
         };
 
-        let contact: Option<WalletkaContact> = self
-            .database
-            .update((TABLE_NAME, id))
-            .content(contact)
-            .await?;
+        let contact: Option<WalletkaContact> =
+            self.db.update((TABLE_NAME, id)).content(contact).await?;
 
         match contact {
             Some(contact) => Ok(contact),

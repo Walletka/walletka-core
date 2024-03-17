@@ -9,16 +9,15 @@ use crate::io::{
     repositories::contacts_repository::ContactsRepository,
 };
 
-pub struct ContactsService<C>
+pub struct ContactsManager<C>
 where
     C: Connection,
 {
     repository: ContactsRepository<C>,
     nostr_client: NostrClient,
-    // Todo backup
 }
 
-impl<C> ContactsService<C>
+impl<C> ContactsManager<C>
 where
     C: Connection,
 {
@@ -30,7 +29,7 @@ where
     }
 }
 
-impl<C> ContactsService<C>
+impl<C> ContactsManager<C>
 where
     C: Connection,
 {
@@ -54,6 +53,14 @@ where
         let contacts = self.repository.get_all().await?;
 
         Ok(contacts)
+    }
+
+    pub async fn get_by_id(&self, id: &str) -> Result<WalletkaContact> {
+        debug!("Getting contact by id {}", id);
+
+        let contact = self.repository.get_by_id(id).await?;
+
+        Ok(contact)
     }
 
     pub async fn update(&self, contact: WalletkaContact) -> Result<WalletkaContact> {

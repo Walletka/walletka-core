@@ -14,6 +14,4 @@ where
     pub fn new(database: Surreal<C>) -> Self {
         Self { database }
     }
-
-    
 }

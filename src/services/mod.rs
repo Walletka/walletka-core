@@ -1,3 +1,3 @@
-mod contacts_service;
+mod contacts_manager;
 
-pub use contacts_service::ContactsService;
+pub use contacts_manager::ContactsManager;

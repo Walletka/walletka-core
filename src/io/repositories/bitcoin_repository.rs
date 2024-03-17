@@ -1,8 +1,6 @@
 use anyhow::Result;
 use surrealdb::{Connection, Surreal};
 
-use crate::io::entities::Txo;
-
 pub struct BitcoinRepository<C>
 where
     C: Connection,

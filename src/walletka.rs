@@ -7,7 +7,7 @@ use surrealdb::Connection;
 use crate::{
     enums::WalletkaAssetState,
     io::entities::WalletkaContact,
-    services::ContactsService,
+    services::ContactsManager,
     types::{Amount, WalletkaAsset, WalletkaBalance},
     wallets::bitcoin::BitcoinWallet,
 };
@@ -16,7 +16,7 @@ pub struct Walletka<C>
 where
     C: Connection,
 {
-    contact_service: ContactsService<C>,
+    contact_manager: ContactsManager<C>,
     bitcoin_wallet: BitcoinWallet,
 }
 
@@ -24,31 +24,33 @@ impl<C> Walletka<C>
 where
     C: Connection,
 {
-    pub fn new(contact_service: ContactsService<C>, bitcoin_wallet: BitcoinWallet) -> Self {
+    pub fn new(contact_service: ContactsManager<C>, bitcoin_wallet: BitcoinWallet) -> Self {
         Self {
-            contact_service,
+            contact_manager: contact_service,
             bitcoin_wallet,
         }
     }
 
     pub async fn add_contact(&self, contact: WalletkaContact) -> Result<WalletkaContact> {
-        self.contact_service.add(contact).await
+        self.contact_manager.add(contact).await
     }
 
     pub async fn get_all_contacts(&self) -> Result<Vec<WalletkaContact>> {
-        self.contact_service.get_all().await
+        self.contact_manager.get_all().await
     }
 
-    pub async fn delete_contact(&self, contact: WalletkaContact) -> Result<()> {
-        self.contact_service.delete(contact).await
+    pub async fn delete_contact_by_id(&self, contact_id: String) -> Result<()> {
+        let contact = self.contact_manager.get_by_id(&contact_id).await?;
+
+        self.contact_manager.delete(contact).await
     }
 
     pub async fn update_contact(&self, contact: WalletkaContact) -> Result<WalletkaContact> {
-        self.contact_service.update(contact).await
+        self.contact_manager.update(contact).await
     }
 
     pub async fn import_contacts_from_npub(&self, npub: String) -> Result<Vec<String>> {
-        self.contact_service.import_from_npub(npub).await
+        self.contact_manager.import_from_npub(npub).await
     }
 
     /// Sync wallets

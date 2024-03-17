@@ -5,14 +5,14 @@ use bdk::keys::bip39::Mnemonic;
 use log::debug;
 use surrealdb::engine::local::Db;
 
-use crate::wallets::bitcoin::BitcoinWallet;
 use crate::io::clients::NostrClient;
+use crate::wallets::bitcoin::BitcoinWallet;
 use crate::{
     io::{
         database::{get_database, DatabaseStore},
         repositories::contacts_repository::ContactsRepository,
     },
-    services::ContactsService,
+    services::ContactsManager,
     Walletka,
 };
 
@@ -37,7 +37,7 @@ impl Default for WalletkaBuilder {
             network: Network::Testnet,
             mnemonic_words: None,
             passphrase: Default::default(),
-            data_path: "".to_string(), // Todo
+            data_path: ".data".to_string(),
             nostr_relay_urls: Default::default(),
             electrum_url: "".to_string(), // Todo
             esplora_url: "".to_string(),  // Todo
@@ -122,7 +122,7 @@ impl WalletkaBuilder {
         let contacts_repository = ContactsRepository::new(database);
         debug!("Contacts repository created");
 
-        let contacts_service = ContactsService::new(contacts_repository, nostr_client);
+        let contacts_service = ContactsManager::new(contacts_repository, nostr_client);
         debug!("Contacts service created");
 
         let mnemonic = Mnemonic::parse(self.mnemonic_words.clone().unwrap())?;
