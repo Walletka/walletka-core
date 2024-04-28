@@ -1,5 +1,6 @@
 [workspace]
 members = ["cli", "."]
+resolver = "2"
 
 [workspace.package]
 version = "0.1.0"
@@ -10,7 +11,7 @@ edition = "2021"
 anyhow = "1.0.80"
 tokio = { version = "1.36.0", features = ["macros", "rt-multi-thread"] }
 bdk = { version = "0.29.0", features = ["all-keys", "keys-bip39"] }
-bdk_esplora = { version = "0.9.0", default-features = false, features = [
+bdk_esplora = { version = "0.11.0", default-features = false, features = [
     "std",
     "blocking",
 ] }
@@ -38,6 +39,11 @@ env_logger = { workspace = true }
 bdk_esplora = { workspace = true }
 thiserror = { workspace = true }
 serde = { workspace = true }
-surrealdb = { version = "1.3.0", features = ["kv-rocksdb", "kv-mem"] }
-nostr-sdk = "0.28.0"
+surrealdb = { version = "=1.3.0", features = ["kv-rocksdb", "kv-mem"] }
+nostr-sdk = "0.30.0"
 itertools = "0.12.1"
+cashu-sdk = { git = "https://github.com/Walletka/cashu-crab", branch = "cashu-sdk-kotlin-android", default-features = false, features = [
+    "mint",
+    "wallet",
+] }
+sha256 = "1.5.0"

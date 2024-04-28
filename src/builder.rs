@@ -6,7 +6,9 @@ use log::debug;
 use surrealdb::engine::local::Db;
 
 use crate::io::clients::NostrClient;
+use crate::io::repositories::cashu_repository::CashuRepository;
 use crate::wallets::bitcoin::BitcoinWallet;
+use crate::wallets::cashu::CashuWallet;
 use crate::{
     io::{
         database::{get_database, DatabaseStore},
@@ -119,7 +121,7 @@ impl WalletkaBuilder {
         .await?;
         debug!("Nostr client created");
 
-        let contacts_repository = ContactsRepository::new(database);
+        let contacts_repository = ContactsRepository::new(database.clone());
         debug!("Contacts repository created");
 
         let contacts_service = ContactsManager::new(contacts_repository, nostr_client);
@@ -141,7 +143,11 @@ impl WalletkaBuilder {
         .unwrap();
         debug!("Bitcoin wallet created");
 
-        let walletka = Walletka::new(contacts_service, bitcoin_wallet);
+        let cashu_repository = CashuRepository::new(database.clone());
+
+        let cashu_wallet = CashuWallet::new(cashu_repository).await?;
+
+        let walletka = Walletka::new(contacts_service, bitcoin_wallet, cashu_wallet);
         debug!("Walletka created");
 
         Ok(walletka)

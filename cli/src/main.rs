@@ -5,7 +5,7 @@ use clap::{Parser, Subcommand};
 use dotenv::dotenv;
 use log::{debug, info};
 use walletka_core::{
-    bdk::bitcoin::{bech32::ToBase32, Network},
+    bdk::bitcoin::Network,
     builder::WalletkaBuilder,
     io::database::DatabaseStore,
     utils::{generate_mnemonic, load_mnemonic, save_mnemonic},
@@ -31,6 +31,9 @@ enum Commands {
     Contacts,
     ImportContacts { npub: String },
     DeleteContact { contact_id: String },
+    CashuClaim { token: String },
+    CashuMints,
+    CashuSend { keyset_id: String, amount_sat: u64 },
 }
 
 #[tokio::main]
@@ -70,7 +73,7 @@ async fn main() -> Result<()> {
     );
 
     debug!("Building Walletka...");
-    let walletka = builder.build().await?;
+    let mut walletka = builder.build().await?;
     info!("Walletka started");
 
     match args.cmd {
@@ -84,11 +87,11 @@ async fn main() -> Result<()> {
             dbg!(address);
         }
         Commands::Assets => {
-            let assets = walletka.get_assets()?;
+            let assets = walletka.get_assets().await?;
             dbg!(assets);
         }
         Commands::Balance { currency_symbol } => {
-            let balance = walletka.get_balance(currency_symbol)?;
+            let balance = walletka.get_balance(currency_symbol).await?;
             info!("Balance: {:#? }", balance);
         }
         Commands::Contacts => {
@@ -100,6 +103,26 @@ async fn main() -> Result<()> {
         }
         Commands::DeleteContact { contact_id } => {
             walletka.delete_contact_by_id(contact_id).await?;
+        }
+        Commands::CashuClaim { token } => {
+            walletka.claim_cashu_token(token).await?;
+        }
+        Commands::CashuMints => {
+            let mints = walletka.get_cashu_mints().await?;
+            dbg!(mints);
+        }
+        Commands::CashuSend {
+            keyset_id,
+            amount_sat,
+        } => {
+            let token = walletka
+                .send_cashu_token(
+                    keyset_id,
+                    amount_sat,
+                    Some("Send from walletka".to_string()),
+                )
+                .await?;
+            dbg!(token);
         }
     };
 

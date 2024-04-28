@@ -6,10 +6,10 @@ use surrealdb::Connection;
 
 use crate::{
     enums::WalletkaAssetState,
-    io::entities::WalletkaContact,
+    io::entities::{CashuMint, WalletkaContact},
     services::ContactsManager,
     types::{Amount, WalletkaAsset, WalletkaBalance},
-    wallets::bitcoin::BitcoinWallet,
+    wallets::{bitcoin::BitcoinWallet, cashu::CashuWallet},
 };
 
 pub struct Walletka<C>
@@ -18,16 +18,22 @@ where
 {
     contact_manager: ContactsManager<C>,
     bitcoin_wallet: BitcoinWallet,
+    cashu_wallet: CashuWallet<C>,
 }
 
 impl<C> Walletka<C>
 where
     C: Connection,
 {
-    pub fn new(contact_service: ContactsManager<C>, bitcoin_wallet: BitcoinWallet) -> Self {
+    pub fn new(
+        contact_service: ContactsManager<C>,
+        bitcoin_wallet: BitcoinWallet,
+        cashu_wallet: CashuWallet<C>,
+    ) -> Self {
         Self {
             contact_manager: contact_service,
             bitcoin_wallet,
+            cashu_wallet,
         }
     }
 
@@ -68,15 +74,37 @@ where
     }
 
     /// Get all assets held by Walletka
-    pub fn get_assets(&self) -> Result<Vec<WalletkaAsset>> {
-        let utxos: Vec<WalletkaAsset> = self
+    pub async fn get_assets(&self) -> Result<Vec<WalletkaAsset>> {
+        let mut walletka_assets: Vec<WalletkaAsset> = vec![];
+
+        let mut utxos: Vec<WalletkaAsset> = self
             .bitcoin_wallet
             .get_utxos()?
             .into_iter()
             .map(WalletkaAsset::from)
             .collect();
 
-        Ok(utxos)
+        let mut cashu_tokens: Vec<WalletkaAsset> = self
+            .cashu_wallet
+            .get_proofs()
+            .await?
+            .into_iter()
+            .map(WalletkaAsset::from)
+            .collect();
+
+        let mut cashu_pending_tokens: Vec<WalletkaAsset> = self
+            .cashu_wallet
+            .get_pending_tokens()
+            .await?
+            .into_iter()
+            .map(WalletkaAsset::from)
+            .collect();
+
+        walletka_assets.append(&mut utxos);
+        walletka_assets.append(&mut cashu_tokens);
+        walletka_assets.append(&mut cashu_pending_tokens);
+
+        Ok(walletka_assets)
     }
 
     /// Get onchain address
@@ -85,10 +113,10 @@ where
     }
 
     /// Get all assets grouped by currency
-    pub fn get_balance(&self, currency_symbol: Option<String>) -> Result<WalletkaBalance> {
+    pub async fn get_balance(&self, currency_symbol: Option<String>) -> Result<WalletkaBalance> {
         let mut walletka_balance = WalletkaBalance::default();
 
-        let mut assets = self.get_assets()?;
+        let mut assets = self.get_assets().await?;
 
         if let Some(symbol) = currency_symbol {
             assets = assets
@@ -130,5 +158,27 @@ where
         }
 
         Ok(walletka_balance)
+    }
+
+    pub async fn claim_cashu_token(&mut self, token: String) -> Result<()> {
+        self.cashu_wallet.claim_token(token).await
+    }
+
+    pub async fn get_cashu_mints(&self) -> Result<Vec<CashuMint>> {
+        Ok(self.cashu_wallet.get_mints())
+    }
+
+    pub async fn send_cashu_token(
+        &mut self,
+        keyset_id: String,
+        amount_sat: u64,
+        memo: Option<String>,
+    ) -> Result<String> {
+        let token = self
+            .cashu_wallet
+            .create_token_from_keyset(keyset_id, amount_sat, memo)
+            .await?;
+
+        Ok(token.convert_to_string()?)
     }
 }

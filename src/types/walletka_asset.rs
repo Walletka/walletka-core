@@ -1,7 +1,10 @@
 use bdk::LocalUtxo;
 use serde::{Deserialize, Serialize};
 
-use crate::enums::{WalletkaAssetLocation, WalletkaAssetState, WalletkaLayer};
+use crate::{
+    enums::{WalletkaAssetLocation, WalletkaAssetState, WalletkaLayer},
+    io::entities::{CashuProof, PendingCashuToken},
+};
 
 use super::{Amount, Currency};
 
@@ -27,6 +30,28 @@ impl From<LocalUtxo> for WalletkaAsset {
                 WalletkaAssetState::Settled
             },
             amount: Amount::new(value.txout.value, Currency::bitcoin()),
+        }
+    }
+}
+
+impl From<CashuProof> for WalletkaAsset {
+    fn from(value: CashuProof) -> Self {
+        Self {
+            layer: WalletkaLayer::Cashu,
+            asset_location: WalletkaAssetLocation::Cashu(value.id.unwrap().id.to_string()),
+            asset_state: WalletkaAssetState::Settled,
+            amount: Amount::new(value.amount_sat, Currency::bitcoin()),
+        }
+    }
+}
+
+impl From<PendingCashuToken> for WalletkaAsset {
+    fn from(value: PendingCashuToken) -> Self {
+        Self {
+            layer: WalletkaLayer::Cashu,
+            asset_location: WalletkaAssetLocation::Cashu(value.id.clone().unwrap().id.to_string()),
+            asset_state: WalletkaAssetState::Waiting,
+            amount: Amount::new(value.amount_sat, Currency::bitcoin()),
         }
     }
 }

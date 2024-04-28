@@ -1,6 +1,10 @@
+mod cashu_mint;
+mod cashu_proof;
 mod contact;
 mod transaction;
 mod txo;
-pub use contact::{WalletkaContact, ContactAddress, ContactAddressType};
+pub use cashu_mint::CashuMint;
+pub use cashu_proof::{CashuProof, PendingCashuToken, PendingCashuTokenSource};
+pub use contact::{ContactAddress, ContactAddressType, WalletkaContact};
 pub use transaction::WalletkaTransaction;
 pub use txo::Txo;
