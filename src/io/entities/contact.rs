@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use log::debug;
 use nostr_sdk::Metadata;
 use serde::{Deserialize, Serialize};

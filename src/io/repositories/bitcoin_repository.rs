@@ -1,4 +1,3 @@
-use anyhow::Result;
 use surrealdb::{Connection, Surreal};
 
 pub struct BitcoinRepository<C>

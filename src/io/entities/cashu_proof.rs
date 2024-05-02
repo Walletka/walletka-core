@@ -1,11 +1,8 @@
-use std::str::FromStr;
-
 use cashu_sdk::{
     nuts::{Id, Proof, PublicKey},
     secret::Secret,
     Amount,
 };
-use nostr_sdk::serde_json::value;
 use serde::{Deserialize, Serialize};
 use surrealdb::sql::{Datetime, Thing};
 

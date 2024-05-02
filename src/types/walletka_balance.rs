@@ -6,6 +6,7 @@ use super::Amount;
 pub struct WalletkaBalance {
     pub confirmed: Vec<Amount>,
     pub unconfirmed: Vec<Amount>,
+    pub locked: Vec<Amount>,
 }
 
 impl WalletkaBalance {}

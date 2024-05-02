@@ -2,23 +2,23 @@ use itertools::Itertools;
 
 use anyhow::Result;
 use bdk::bitcoin::{psbt::PartiallySignedTransaction, Address, Transaction};
+use log::{debug, info};
 use surrealdb::Connection;
 
 use crate::{
     enums::WalletkaAssetState,
-    io::entities::{CashuMint, WalletkaContact},
-    services::ContactsManager,
+    io::entities::CashuMint,
     types::{Amount, WalletkaAsset, WalletkaBalance},
-    wallets::{bitcoin::BitcoinWallet, cashu::CashuWallet},
+    wallets::{bitcoin::BitcoinWallet, cashu::CashuWallet, rgb::RgbWallet, NestedWallet},
 };
 
 pub struct Walletka<C>
 where
     C: Connection,
 {
-    contact_manager: ContactsManager<C>,
     bitcoin_wallet: BitcoinWallet,
     cashu_wallet: CashuWallet<C>,
+    rgb_wallet: RgbWallet,
 }
 
 impl<C> Walletka<C>
@@ -26,42 +26,24 @@ where
     C: Connection,
 {
     pub fn new(
-        contact_service: ContactsManager<C>,
         bitcoin_wallet: BitcoinWallet,
         cashu_wallet: CashuWallet<C>,
+        rgb_wallet: RgbWallet,
     ) -> Self {
         Self {
-            contact_manager: contact_service,
             bitcoin_wallet,
             cashu_wallet,
+            rgb_wallet,
         }
     }
 
-    pub async fn add_contact(&self, contact: WalletkaContact) -> Result<WalletkaContact> {
-        self.contact_manager.add(contact).await
-    }
-
-    pub async fn get_all_contacts(&self) -> Result<Vec<WalletkaContact>> {
-        self.contact_manager.get_all().await
-    }
-
-    pub async fn delete_contact_by_id(&self, contact_id: String) -> Result<()> {
-        let contact = self.contact_manager.get_by_id(&contact_id).await?;
-
-        self.contact_manager.delete(contact).await
-    }
-
-    pub async fn update_contact(&self, contact: WalletkaContact) -> Result<WalletkaContact> {
-        self.contact_manager.update(contact).await
-    }
-
-    pub async fn import_contacts_from_npub(&self, npub: String) -> Result<Vec<String>> {
-        self.contact_manager.import_from_npub(npub).await
-    }
-
     /// Sync wallets
-    pub async fn sync(&self) -> Result<()> {
-        self.bitcoin_wallet.sync()
+    pub async fn sync(&mut self) -> Result<()> {
+        // Todo: Parallelize
+        self.bitcoin_wallet.sync()?;
+        self.rgb_wallet.sync()?;
+
+        Ok(())
     }
 
     pub fn sign_psbt(&self, psbt: &mut PartiallySignedTransaction) -> Result<()> {
@@ -100,9 +82,26 @@ where
             .map(WalletkaAsset::from)
             .collect();
 
+        let mut rgb_utxos: Vec<WalletkaAsset> = self
+            .rgb_wallet
+            .get_utxos()?
+            .into_iter()
+            .filter(|u| u.utxo.colorable)
+            .map(WalletkaAsset::from)
+            .collect();
+
+        let mut rgb_assets: Vec<WalletkaAsset> = self
+            .rgb_wallet
+            .get_rgb20_assets()?
+            .into_iter()
+            .map(WalletkaAsset::from)
+            .collect();
+
         walletka_assets.append(&mut utxos);
         walletka_assets.append(&mut cashu_tokens);
         walletka_assets.append(&mut cashu_pending_tokens);
+        walletka_assets.append(&mut rgb_utxos);
+        walletka_assets.append(&mut rgb_assets);
 
         Ok(walletka_assets)
     }
@@ -130,10 +129,14 @@ where
         for assets in by_currency.into_iter() {
             let mut confirmed_value = 0;
             let mut unconfirmed_value = 0;
+            let mut locked_value = 0;
 
             for asset in assets.1 {
                 if asset.asset_state == WalletkaAssetState::Settled {
                     confirmed_value += asset.amount.value;
+                } else if asset.asset_state == WalletkaAssetState::Unspendable {
+                    // Todo: Add pending state
+                    locked_value += asset.amount.value;
                 } else {
                     unconfirmed_value += asset.amount.value;
                 }
@@ -149,11 +152,20 @@ where
 
             if unconfirmed_value > 0 {
                 let unconfirmed_amount = Amount {
-                    currency: assets.0,
+                    currency: assets.0.clone(),
                     value: unconfirmed_value,
                 };
 
                 walletka_balance.unconfirmed.push(unconfirmed_amount);
+            }
+
+            if locked_value > 0 {
+                let locked_amount = Amount {
+                    currency: assets.0,
+                    value: locked_value,
+                };
+
+                walletka_balance.locked.push(locked_amount);
             }
         }
 
@@ -180,5 +192,52 @@ where
             .await?;
 
         Ok(token.convert_to_string()?)
+    }
+
+    // RGB functions
+
+    pub fn create_rgb_utxos(&mut self) -> Result<()> {
+        self.rgb_wallet.create_utxos()
+    }
+
+    pub fn issue_rgb20_asset(
+        &mut self,
+        ticker: String,
+        name: String,
+        precision: u8,
+        amount: u64,
+    ) -> Result<String> {
+        info!("Issuing RGB20 asset");
+
+        let asset = self.rgb_wallet
+            .issue_rgb20_asset(ticker, name, precision, amount)?;
+
+        info!("RGB20 asset issued: {}", asset.asset_id);
+        Ok(asset.asset_id)
+    }
+
+    pub fn create_rgb_invoice(
+        &self,
+        asset_id: Option<String>,
+        amount: Option<u64>,
+        duration_seconds: Option<u32>,
+        min_confirmations: Option<u8>,
+        transport_url: Option<String>,
+        blinded: bool,
+    ) -> Result<String> {
+        info!("Creating RGB invoice");
+
+        let invoice_data = self.rgb_wallet.create_invoice(
+            asset_id,
+            amount,
+            duration_seconds,
+            min_confirmations,
+            transport_url,
+            blinded,
+        )?;
+
+        info!("RGB invoice created: {}", invoice_data.invoice);
+
+        Ok(invoice_data.invoice)
     }
 }
