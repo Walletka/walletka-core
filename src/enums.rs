@@ -29,4 +29,5 @@ pub enum WalletkaAssetState {
     Waiting,
     Settled,
     Spent,
+    Unspendable
 }

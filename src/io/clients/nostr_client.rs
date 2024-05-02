@@ -4,7 +4,7 @@ use anyhow::Result;
 use log::{debug, info};
 use nostr_sdk::{
     nips::{nip04, nip06::FromMnemonic},
-    Client, Contact, Event, Filter, Keys, Kind, Metadata, PublicKey, SecretKey, Tag, Timestamp,
+    Client, Contact, Event, Filter, Keys, Kind, Metadata, PublicKey, Tag, Timestamp,
     ToBech32,
 };
 

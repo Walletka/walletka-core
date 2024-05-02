@@ -1,4 +1,5 @@
 use bdk::LocalUtxo;
+use rgb_lib::wallet::{AssetNIA, Unspent};
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -52,6 +53,39 @@ impl From<PendingCashuToken> for WalletkaAsset {
             asset_location: WalletkaAssetLocation::Cashu(value.id.clone().unwrap().id.to_string()),
             asset_state: WalletkaAssetState::Waiting,
             amount: Amount::new(value.amount_sat, Currency::bitcoin()),
+        }
+    }
+}
+
+impl From<Unspent> for WalletkaAsset {
+    fn from(value: Unspent) -> Self {
+        Self {
+            layer: WalletkaLayer::Rgb,
+            asset_location: WalletkaAssetLocation::Utxo(format!(
+                "{}:{}",
+                value.utxo.outpoint.txid, value.utxo.outpoint.vout
+            )),
+            asset_state: WalletkaAssetState::Unspendable,
+            amount: Amount::new(value.utxo.btc_amount, Currency::bitcoin()),
+        }
+    }
+}
+
+impl From<AssetNIA> for WalletkaAsset {
+    fn from(value: AssetNIA) -> Self {
+        Self {
+            layer: WalletkaLayer::Rgb,
+            asset_location: WalletkaAssetLocation::Utxo(format!(
+                "{}",
+                value.asset_id
+            )),
+            asset_state: WalletkaAssetState::Unknown,
+            amount: Amount::new(value.balance.settled, Currency::new(
+                value.ticker.clone(),
+                value.name,
+                value.ticker,
+                value.precision as u64,
+            )),
         }
     }
 }

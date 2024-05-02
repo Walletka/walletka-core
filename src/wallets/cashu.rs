@@ -89,7 +89,7 @@ where
         debug!("Claiming cashu token...");
 
         let decoded_token = Token::from_str(&token)?;
-        let memo = decoded_token.memo;
+        let _memo = decoded_token.memo;
         let proofs = decoded_token.token;
         let mint_url = proofs.first().unwrap().mint.clone();
 

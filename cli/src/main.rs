@@ -27,13 +27,39 @@ enum Commands {
     Sync,
     Address,
     Assets,
-    Balance { currency_symbol: Option<String> },
+    Balance {
+        currency_symbol: Option<String>,
+    },
     Contacts,
-    ImportContacts { npub: String },
-    DeleteContact { contact_id: String },
-    CashuClaim { token: String },
+    ImportContacts {
+        npub: String,
+    },
+    DeleteContact {
+        contact_id: String,
+    },
+    CashuClaim {
+        token: String,
+    },
     CashuMints,
-    CashuSend { keyset_id: String, amount_sat: u64 },
+    CashuSend {
+        keyset_id: String,
+        amount_sat: u64,
+    },
+    RgbCreateUtxos,
+    RgbCreateAssetNia {
+        ticker: String,
+        name: String,
+        precision: u8,
+        amount: u64,
+    },
+    RgbInvoice {
+        asset_id: Option<String>,
+        amount: Option<u64>,
+        duration_seconds: Option<u32>,
+        min_confirmations: Option<u8>,
+        transport_url: Option<String>,
+        blinded: Option<bool>,
+    },
 }
 
 #[tokio::main]
@@ -68,8 +94,9 @@ async fn main() -> Result<()> {
         None,
         data_path,
         vec![nostr_relay_url],
-        "100.64.147.89:50000".to_string(),
+        "130.61.74.161:50001".to_string(),
         "esplora.tchaicash.space:443".to_string(),
+        Some("rpc://rgb.tchaicash.space:443".to_string()), // Todo: Some("rgb.tchaicash.space:443".to_string()),
     );
 
     debug!("Building Walletka...");
@@ -95,14 +122,17 @@ async fn main() -> Result<()> {
             info!("Balance: {:#? }", balance);
         }
         Commands::Contacts => {
-            let contacts = walletka.get_all_contacts().await?;
-            dbg!(contacts);
+            // let contacts = walletka.get_all_contacts().await?;
+            // dbg!(contacts);
+            println!("TODO");
         }
-        Commands::ImportContacts { npub } => {
-            walletka.import_contacts_from_npub(npub).await?;
+        Commands::ImportContacts { npub: _ } => {
+            // walletka.import_contacts_from_npub(npub).await?;
+            println!("TODO");
         }
-        Commands::DeleteContact { contact_id } => {
-            walletka.delete_contact_by_id(contact_id).await?;
+        Commands::DeleteContact { contact_id: _ } => {
+            // walletka.delete_contact_by_id(contact_id).await?;
+            println!("TODO");
         }
         Commands::CashuClaim { token } => {
             walletka.claim_cashu_token(token).await?;
@@ -123,6 +153,38 @@ async fn main() -> Result<()> {
                 )
                 .await?;
             dbg!(token);
+        }
+        Commands::RgbCreateUtxos => {
+            walletka.create_rgb_utxos()?;
+            info!("Utxos created");
+        }
+        Commands::RgbCreateAssetNia {
+            ticker,
+            name,
+            precision,
+            amount,
+        } => {
+            let asset_id = walletka.issue_rgb20_asset(ticker, name, precision, amount)?;
+            info!("Asset created: {}", asset_id);
+        }
+
+        Commands::RgbInvoice {
+            asset_id,
+            amount,
+            duration_seconds,
+            min_confirmations,
+            transport_url,
+            blinded,
+        } => {
+            let invoice = walletka.create_rgb_invoice(
+                asset_id,
+                amount,
+                duration_seconds,
+                min_confirmations,
+                transport_url,
+                blinded.unwrap_or(true),
+            )?;
+            dbg!(invoice);
         }
     };
 

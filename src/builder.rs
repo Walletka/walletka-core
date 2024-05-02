@@ -9,6 +9,7 @@ use crate::io::clients::NostrClient;
 use crate::io::repositories::cashu_repository::CashuRepository;
 use crate::wallets::bitcoin::BitcoinWallet;
 use crate::wallets::cashu::CashuWallet;
+use crate::wallets::rgb::RgbWallet;
 use crate::{
     io::{
         database::{get_database, DatabaseStore},
@@ -28,6 +29,7 @@ pub struct WalletkaBuilder {
     pub nostr_relay_urls: Vec<String>,
     pub electrum_url: String,
     pub esplora_url: String,
+    pub rgb_transport_url: Option<String>,
 }
 
 // Todo Needed?
@@ -43,6 +45,7 @@ impl Default for WalletkaBuilder {
             nostr_relay_urls: Default::default(),
             electrum_url: "".to_string(), // Todo
             esplora_url: "".to_string(),  // Todo
+            rgb_transport_url: None,
         }
     }
 }
@@ -58,6 +61,7 @@ impl WalletkaBuilder {
         nostr_relay_urls: Vec<String>,
         electrum_url: String,
         esplora_url: String,
+        rgb_transport_url: Option<String>,
     ) -> Self {
         let wallet_id = match wallet_id {
             Some(id) => id,
@@ -74,6 +78,7 @@ impl WalletkaBuilder {
             nostr_relay_urls,
             electrum_url,
             esplora_url,
+            rgb_transport_url,
         }
     }
 
@@ -124,7 +129,7 @@ impl WalletkaBuilder {
         let contacts_repository = ContactsRepository::new(database.clone());
         debug!("Contacts repository created");
 
-        let contacts_service = ContactsManager::new(contacts_repository, nostr_client);
+        let _contacts_service = ContactsManager::new(contacts_repository, nostr_client);
         debug!("Contacts service created");
 
         let mnemonic = Mnemonic::parse(self.mnemonic_words.clone().unwrap())?;
@@ -144,10 +149,20 @@ impl WalletkaBuilder {
         debug!("Bitcoin wallet created");
 
         let cashu_repository = CashuRepository::new(database.clone());
-
         let cashu_wallet = CashuWallet::new(cashu_repository).await?;
+        debug!("Cashu wallet created");
 
-        let walletka = Walletka::new(contacts_service, bitcoin_wallet, cashu_wallet);
+        let rgb_wallet = RgbWallet::new(
+            self.mnemonic_words.clone().unwrap(),
+            self.data_path.clone(),
+            self.network.into(),
+            Some(self.electrum_url.clone()),
+            self.rgb_transport_url.clone(),
+        )
+        .await?;
+        debug!("RGB wallet created");
+
+        let walletka = Walletka::new(bitcoin_wallet, cashu_wallet, rgb_wallet);
         debug!("Walletka created");
 
         Ok(walletka)

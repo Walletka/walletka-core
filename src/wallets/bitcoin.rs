@@ -1,22 +1,39 @@
 use anyhow::{bail, Result};
-use bdk::bitcoin::bip32::{ExtendedPubKey, IntoDerivationPath};
+use bdk::bitcoin::bip32::ExtendedPubKey;
 use bdk::bitcoin::psbt::PartiallySignedTransaction;
 use bdk::bitcoin::secp256k1::Secp256k1;
 use bdk::bitcoin::{Address, Network, Transaction};
 use bdk::blockchain::{AnyBlockchain, Blockchain, ElectrumBlockchain};
 use bdk::database::any::SledDbConfiguration;
 use bdk::database::{AnyDatabase, ConfigurableDatabase};
-use bdk::descriptor::IntoWalletDescriptor;
 use bdk::electrum_client::Client;
 use bdk::keys::{bip39::Mnemonic, DerivableKey, ExtendedKey};
+use bdk::template::Bip84;
 use bdk::wallet::AddressIndex;
-use bdk::{descriptor, Balance, LocalUtxo, SignOptions, SyncOptions, Wallet};
+use bdk::{Balance, LocalUtxo, SignOptions, SyncOptions, Wallet as BdkWallet};
 use log::{debug, info};
+use crate::wallets::NestedWallet;
 
 pub struct BitcoinWallet {
-    pub wallet: Wallet<AnyDatabase>,
+    wallet: BdkWallet<AnyDatabase>,
     pub xpub: ExtendedPubKey,
     blockchain: Option<AnyBlockchain>,
+}
+
+impl NestedWallet for BitcoinWallet {
+
+ fn sync(&self) -> Result<()> {
+        debug!("Syncing with blockchain...");
+
+        match &self.blockchain {
+            Some(blockchain) => {
+                self.wallet.sync(blockchain, SyncOptions::default())?;
+                info!("Blockchain synced");
+                Ok(())
+            }
+            None => bail!("Offline mode"),
+        }
+    }
 }
 
 impl BitcoinWallet {
@@ -38,7 +55,7 @@ impl BitcoinWallet {
     pub fn new(
         network: Network,
         mnemonic: Mnemonic,
-        passphrase: Option<String>,
+        _passphrase: Option<String>,
         blockchain: Option<AnyBlockchain>,
         data_path: String,
     ) -> Result<BitcoinWallet> {
@@ -55,33 +72,18 @@ impl BitcoinWallet {
         // Generate the extended key
         let xkey: ExtendedKey = mnemonic.clone().into_extended_key()?;
         // Get xprv from the extended key
-        let xpub = xkey.into_xpub(network, &secp);
+        let xprv = xkey.into_xprv(network).unwrap();
+        let xpub = ExtendedPubKey::from_priv(&secp, &xprv);
 
         info!("Xpub:\n{}", xpub);
 
-        let mnemonic_with_passphrase = (mnemonic, passphrase);
-        let (descriptor, descriptor_path) = descriptor!(tr((
-            mnemonic_with_passphrase.clone(),
-            "m/86'/0'/0'/0".into_derivation_path()?
-        )))?
-        .into_wallet_descriptor(&secp, network)?;
+        let descriptor = Bip84(xprv, bdk::KeychainKind::Internal);
+        let change_descriptor = Some(Bip84(xprv, bdk::KeychainKind::Internal));
 
-        let (change_descriptor, change_path) = descriptor!(tr((
-            mnemonic_with_passphrase.clone(),
-            "m/86'/0'/0'/1".into_derivation_path()?
-        )))?
-        .into_wallet_descriptor(&secp, network)?;
-
-        // Create a BDK wallet structure using BIP 86 descriptor ("m/86'/0'/0'/0" and "m/86'/0'/0'/1")
-        let wallet = Wallet::new(
-            descriptor
-                .to_string_with_secret(&descriptor_path)
-                .into_wallet_descriptor(&secp, network)?,
-            Some(
-                change_descriptor
-                    .to_string_with_secret(&change_path)
-                    .into_wallet_descriptor(&secp, network)?,
-            ),
+        // Todo: Create a BDK wallet structure using BIP 86 descriptor ("m/86'/0'/0'/0" and "m/86'/0'/0'/1")
+        let wallet = BdkWallet::new(
+            descriptor,
+            change_descriptor,
             network,
             database,
         )?;
@@ -93,18 +95,6 @@ impl BitcoinWallet {
         })
     }
 
-    pub fn sync(&self) -> Result<()> {
-        debug!("Syncing with blockchain...");
-
-        match &self.blockchain {
-            Some(blockchain) => {
-                self.wallet.sync(blockchain, SyncOptions::default())?;
-                info!("Blockchain synced");
-                Ok(())
-            }
-            None => bail!("Offline mode"),
-        }
-    }
 
     pub fn get_unused_address(&self) -> Result<Address> {
         Ok(self.wallet.get_address(AddressIndex::LastUnused)?.address)
