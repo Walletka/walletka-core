@@ -22,3 +22,8 @@ walletka-core = { path = "../" }
 
 [build-dependencies]
 uniffi = { version = "0.27.1", default-features = false, features = [ "build" ] }
+
+[target.'cfg(target_os = "android")'.dependencies]
+openssl = { version = "0.10", default-features = false, features = [
+    "vendored",
+] }
