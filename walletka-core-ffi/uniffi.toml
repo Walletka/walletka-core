@@ -1,0 +1,9 @@
+[bindings.kotlin]
+package_name = "com.walletka"
+cdylib_name = "walletkacoreffi"
+
+[bindings.python]
+cdylib_name = "walletkacoreffi"
+
+[bindings.swift]
+cdylib_name = "walletkacoreffi"
