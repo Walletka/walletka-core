@@ -1,0 +1,24 @@
+[package]
+name = "walletka-core-ffi"
+version.workspace = true
+rust-version.workspace = true
+edition.workspace = true
+
+
+[lib]
+crate-type = ["cdylib"]
+name = "walletkacoreffi"
+
+[[bin]]
+name = "uniffi-bindgen"
+path = "uniffi-bindgen.rs"
+
+[features]
+default = ["uniffi/cli"]
+
+[dependencies]
+uniffi = { version = "0.27.1", default-features = false}
+walletka-core = { path = "../" }
+
+[build-dependencies]
+uniffi = { version = "0.27.1", default-features = false, features = [ "build" ] }

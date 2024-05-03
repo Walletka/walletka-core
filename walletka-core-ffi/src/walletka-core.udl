@@ -1,0 +1,8 @@
+namespace walletka_core {
+
+};
+
+interface WalletkaBuilder {
+    constructor();
+    void set_mnemonic(string mnemonic_words);
+};
