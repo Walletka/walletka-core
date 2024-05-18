@@ -2,7 +2,7 @@ use log::debug;
 use sha256::digest;
 
 use anyhow::{bail, Result};
-use surrealdb::{Connection, Surreal};
+use surrealdb::{engine::local::Db, Surreal};
 
 use crate::io::entities::{CashuMint, CashuProof, PendingCashuToken};
 
@@ -10,18 +10,14 @@ const CASHU_PROOFS_TABLE: &str = "cashu_proofs";
 const PENDING_CASHU_TOKENS_TABLE: &str = "cashu_pending_tokens";
 const CASHU_MINTS_TABLE: &str = "cashu_mints";
 
-pub struct CashuRepository<C>
-where
-    C: Connection,
+pub struct CashuRepository
 {
-    db: Surreal<C>,
+    db: Surreal<Db>,
 }
 
-impl<C> CashuRepository<C>
-where
-    C: Connection,
+impl CashuRepository
 {
-    pub fn new(db: Surreal<C>) -> Self {
+    pub fn new(db: Surreal<Db>) -> Self {
         Self { db }
     }
 

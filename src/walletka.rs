@@ -2,8 +2,7 @@ use itertools::Itertools;
 
 use anyhow::Result;
 use bdk::bitcoin::{psbt::PartiallySignedTransaction, Address, Transaction};
-use log::{debug, info};
-use surrealdb::Connection;
+use log::info;
 
 use crate::{
     enums::WalletkaAssetState,
@@ -12,22 +11,18 @@ use crate::{
     wallets::{bitcoin::BitcoinWallet, cashu::CashuWallet, rgb::RgbWallet, NestedWallet},
 };
 
-pub struct Walletka<C>
-where
-    C: Connection,
+pub struct Walletka
 {
     bitcoin_wallet: BitcoinWallet,
-    cashu_wallet: CashuWallet<C>,
+    cashu_wallet: CashuWallet,
     rgb_wallet: RgbWallet,
 }
 
-impl<C> Walletka<C>
-where
-    C: Connection,
+impl Walletka
 {
     pub fn new(
         bitcoin_wallet: BitcoinWallet,
-        cashu_wallet: CashuWallet<C>,
+        cashu_wallet: CashuWallet,
         rgb_wallet: RgbWallet,
     ) -> Self {
         Self {

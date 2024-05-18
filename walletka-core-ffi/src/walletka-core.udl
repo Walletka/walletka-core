@@ -2,7 +2,26 @@ namespace walletka_core {
 
 };
 
+enum Network {
+    "Bitcoin",
+    "Testnet",
+    "Signet",
+    "Regtest",
+};
 interface WalletkaBuilder {
     constructor();
     void set_mnemonic(string mnemonic_words);
+    void set_memory_db_store();
+    void set_local_db_store(string data_path);
+    void set_network(Network network);
+    void set_nostr_relays(sequence<string> relays);
+    [Async]
+    Walletka build();
 };
+
+interface Walletka {
+    [Async]
+    void sync();
+    string get_bitcoin_address();
+};
+

@@ -17,6 +17,7 @@ path = "uniffi-bindgen.rs"
 default = ["uniffi/cli"]
 
 [dependencies]
+tokio = { workspace = true }
 uniffi = { version = "0.27.1", default-features = false}
 walletka-core = { path = "../" }
 

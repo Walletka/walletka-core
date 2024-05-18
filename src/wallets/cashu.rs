@@ -10,27 +10,23 @@ use itertools::Itertools;
 use log::{debug, info};
 use nostr_sdk::Url;
 use std::{collections::HashMap, str::FromStr};
-use surrealdb::{sql::Datetime, Connection};
+use surrealdb::sql::Datetime;
 
 use crate::io::{
     entities::{CashuMint, CashuProof, PendingCashuToken, PendingCashuTokenSource},
     repositories::cashu_repository::CashuRepository,
 };
 
-pub struct CashuWallet<C>
-where
-    C: Connection,
+pub struct CashuWallet
 {
     client: HttpClient,
-    repository: CashuRepository<C>,
+    repository: CashuRepository,
     mints: HashMap<String, CashuMint>,
 }
 
-impl<C> CashuWallet<C>
-where
-    C: Connection,
+impl CashuWallet
 {
-    pub async fn new(repository: CashuRepository<C>) -> Result<Self> {
+    pub async fn new(repository: CashuRepository) -> Result<Self> {
         let client = HttpClient {};
 
         let mut wallet = Self {

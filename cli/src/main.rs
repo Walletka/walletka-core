@@ -94,8 +94,8 @@ async fn main() -> Result<()> {
         None,
         data_path,
         vec![nostr_relay_url],
-        "130.61.74.161:50001".to_string(),
-        "esplora.tchaicash.space:443".to_string(),
+        Some("130.61.74.161:50001".to_string()),
+        Some("esplora.tchaicash.space:443".to_string()),
         Some("rpc://rgb.tchaicash.space:443".to_string()), // Todo: Some("rgb.tchaicash.space:443".to_string()),
     );
 

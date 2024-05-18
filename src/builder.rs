@@ -1,9 +1,9 @@
 use anyhow::Result;
 use bdk::bitcoin::Network;
 use bdk::blockchain::{AnyBlockchain, ElectrumBlockchain};
+use bdk::electrum_client::Client;
 use bdk::keys::bip39::Mnemonic;
 use log::debug;
-use surrealdb::engine::local::Db;
 
 use crate::io::clients::NostrClient;
 use crate::io::repositories::cashu_repository::CashuRepository;
@@ -27,8 +27,8 @@ pub struct WalletkaBuilder {
     pub passphrase: Option<String>,
     pub data_path: String,
     pub nostr_relay_urls: Vec<String>,
-    pub electrum_url: String,
-    pub esplora_url: String,
+    pub electrum_url: Option<String>,
+    pub esplora_url: Option<String>,
     pub rgb_transport_url: Option<String>,
 }
 
@@ -36,15 +36,15 @@ pub struct WalletkaBuilder {
 impl Default for WalletkaBuilder {
     fn default() -> Self {
         Self {
-            wallet_id: Some(Network::Testnet.to_string()),
+            wallet_id: Some(Network::Regtest.to_string()),
             database_store: DatabaseStore::Memory,
-            network: Network::Testnet,
+            network: Network::Regtest,
             mnemonic_words: None,
-            passphrase: Default::default(),
+            passphrase: None,
             data_path: ".data".to_string(),
             nostr_relay_urls: Default::default(),
-            electrum_url: "".to_string(), // Todo
-            esplora_url: "".to_string(),  // Todo
+            electrum_url: None,
+            esplora_url: None,
             rgb_transport_url: None,
         }
     }
@@ -59,8 +59,8 @@ impl WalletkaBuilder {
         passphrase: Option<String>,
         data_path: String,
         nostr_relay_urls: Vec<String>,
-        electrum_url: String,
-        esplora_url: String,
+        electrum_url: Option<String>,
+        esplora_url: Option<String>,
         rgb_transport_url: Option<String>,
     ) -> Self {
         let wallet_id = match wallet_id {
@@ -91,6 +91,10 @@ impl WalletkaBuilder {
         self.database_store = DatabaseStore::Memory;
     }
 
+    pub fn get_db_store(&self) -> DatabaseStore {
+        self.database_store.clone()
+    }
+
     pub fn set_local_db_store(&mut self, data_path: String) {
         self.database_store = DatabaseStore::Local(data_path);
     }
@@ -112,7 +116,7 @@ impl WalletkaBuilder {
         self.nostr_relay_urls.push(nostr_relay_url);
     }
 
-    pub async fn build(&self) -> Result<Walletka<Db>> {
+    pub async fn build(&self) -> Result<Walletka> {
         let database = get_database(self.database_store.clone(), Some(self.network.to_string()))
             .await
             .unwrap();
@@ -134,15 +138,23 @@ impl WalletkaBuilder {
 
         let mnemonic = Mnemonic::parse(self.mnemonic_words.clone().unwrap())?;
 
-        let electrum_client = bdk::electrum_client::Client::new(&self.electrum_url)?;
-        let blockchain = AnyBlockchain::from(ElectrumBlockchain::from(electrum_client));
+
+        let blockchain = match self.electrum_url.clone() {
+            Some(url) => {
+                debug!("Creating Electrum blockchain");
+                let electrum_client = Client::new(&url)?;
+                Some(AnyBlockchain::from(ElectrumBlockchain::from(electrum_client)))
+            }
+            None => None,
+            
+        };
         debug!("Blockchain created");
 
         let bitcoin_wallet = BitcoinWallet::new(
             self.network,
             mnemonic,
             self.passphrase.clone(),
-            Some(blockchain),
+            blockchain,
             self.data_path.clone(),
         )
         .unwrap();
@@ -156,7 +168,7 @@ impl WalletkaBuilder {
             self.mnemonic_words.clone().unwrap(),
             self.data_path.clone(),
             self.network.into(),
-            Some(self.electrum_url.clone()),
+            self.electrum_url.clone(),
             self.rgb_transport_url.clone(),
         )
         .await?;
