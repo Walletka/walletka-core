@@ -8,6 +8,25 @@ enum Network {
     "Signet",
     "Regtest",
 };
+
+dictionary Currency {
+    string symbol;
+    string name;
+    string base_unit_symbol;
+    u64 decimals;
+};
+
+dictionary Amount {
+    u64 value;
+    Currency currency;
+};
+
+dictionary WalletkaBalance {
+    sequence<Amount> confirmed;
+    sequence<Amount> unconfirmed;
+    sequence<Amount> locked;
+};
+
 interface WalletkaBuilder {
     constructor();
     void set_mnemonic(string mnemonic_words);
@@ -23,5 +42,6 @@ interface Walletka {
     [Async]
     void sync();
     string get_bitcoin_address();
+    WalletkaBalance get_balance(string? currency_symbol);
 };
 

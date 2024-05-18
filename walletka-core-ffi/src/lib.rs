@@ -2,8 +2,10 @@ use std::sync::Arc;
 use tokio::{runtime::Runtime, sync::Mutex};
 
 use walletka_core::{
-    bdk::bitcoin::Network as BitcoinNetwork, builder::WalletkaBuilder as BuilderSdk,
+    bdk::bitcoin::Network as BitcoinNetwork,
+    builder::WalletkaBuilder as BuilderSdk, 
     Walletka as WalletkaSdk,
+    types::{Amount, Currency, WalletkaBalance},
 };
 
 uniffi::include_scaffolding!("walletka-core");
@@ -103,6 +105,17 @@ impl Walletka {
                 .get_bitcoin_address()
                 .unwrap()
                 .to_string()
+        })
+    }
+
+    fn get_balance(&self, currency_symbol: Option<String>) -> WalletkaBalance {
+        self.rt.block_on(async {
+            self.inner_waller
+                .lock()
+                .await
+                .get_balance(currency_symbol)
+                .await
+                .unwrap()
         })
     }
 }
