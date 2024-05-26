@@ -77,8 +77,10 @@ impl WalletkaBuilder {
         });
     }
 
-    async fn build(&self) -> Arc<Walletka> {
-        let walletka = self.inner_builder.lock().await.build().await.unwrap();
+    fn build(&self) -> Arc<Walletka> {
+        let walletka = self.rt.block_on(async {
+            self.inner_builder.lock().await.build().await.unwrap()
+        });
 
         Arc::new(Walletka {
             inner_waller: Mutex::new(walletka),

@@ -1,5 +1,5 @@
 [bindings.kotlin]
-package_name = "com.walletka"
+package_name = "com.walletka.core"
 cdylib_name = "walletkacoreffi"
 
 [bindings.python]

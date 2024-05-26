@@ -34,7 +34,6 @@ interface WalletkaBuilder {
     void set_local_db_store(string data_path);
     void set_network(Network network);
     void set_nostr_relays(sequence<string> relays);
-    [Async]
     Walletka build();
 };
 
