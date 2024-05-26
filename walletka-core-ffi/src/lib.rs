@@ -65,6 +65,12 @@ impl WalletkaBuilder {
         });
     }
 
+    fn set_data_path(&self, data_path: String) {
+        self.rt.block_on(async {
+            self.inner_builder.lock().await.set_data_path(data_path);
+        });
+    }
+
     fn set_network(&self, network: Network) {
         self.rt.block_on(async {
             self.inner_builder.lock().await.set_network(network.into());

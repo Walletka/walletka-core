@@ -116,6 +116,10 @@ impl WalletkaBuilder {
         self.nostr_relay_urls.push(nostr_relay_url);
     }
 
+    pub fn set_data_path(&mut self, data_path: String) {
+        self.data_path = data_path;
+    }
+
     pub async fn build(&self) -> Result<Walletka> {
         let database = get_database(self.database_store.clone(), Some(self.network.to_string()))
             .await
