@@ -2,11 +2,38 @@ namespace walletka_core {
 
 };
 
+[NonExhaustive]
 enum Network {
     "Bitcoin",
     "Testnet",
     "Signet",
     "Regtest",
+};
+
+[NonExhaustive]
+enum WalletkaLayer {
+    "Blockchain",
+    "Lightning",
+    "Cashu",
+    "Fedimint",
+    "Rgb",
+};
+
+[Enum]
+interface WalletkaAssetLocation {
+    Utxo(string loc);
+    LightningChannel(string loc);
+    Cashu(string loc);
+    Fedimint(string loc);
+};
+
+[Enum]
+interface WalletkaAssetState {
+    Unknown();
+    Waiting();
+    Settled();
+    Spent();
+    Unspendable();
 };
 
 dictionary Currency {
@@ -27,6 +54,13 @@ dictionary WalletkaBalance {
     sequence<Amount> locked;
 };
 
+dictionary WalletkaAsset {
+    Amount amount;
+    WalletkaLayer layer;
+    WalletkaAssetLocation asset_location;
+    WalletkaAssetState asset_state;
+};
+
 interface WalletkaBuilder {
     constructor();
     void set_mnemonic(string mnemonic_words);
@@ -35,6 +69,7 @@ interface WalletkaBuilder {
     void set_network(Network network);
     void set_nostr_relays(sequence<string> relays);
     void set_data_path(string data_path);
+    void set_electrum_url(string? electrum_url);
     Walletka build();
 };
 
@@ -43,5 +78,6 @@ interface Walletka {
     void sync();
     string get_bitcoin_address();
     WalletkaBalance get_balance(string? currency_symbol);
+    sequence<WalletkaAsset> get_assets();
 };
 

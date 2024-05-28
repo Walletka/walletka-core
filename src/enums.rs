@@ -8,10 +8,10 @@ pub enum TransactionDirection {
 
 #[derive(Clone, PartialEq, Eq, Debug, Serialize, Deserialize)]
 pub enum WalletkaAssetLocation {
-    Utxo(String),
-    LightningChannel(String),
-    Cashu(String),
-    Fedimint(String),
+    Utxo { loc: String },
+    LightningChannel { loc: String },
+    Cashu { loc: String },
+    Fedimint { loc: String },
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug, Serialize, Deserialize)]
@@ -29,5 +29,5 @@ pub enum WalletkaAssetState {
     Waiting,
     Settled,
     Spent,
-    Unspendable
+    Unspendable,
 }

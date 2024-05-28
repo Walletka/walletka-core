@@ -2,31 +2,14 @@ use std::sync::Arc;
 use tokio::{runtime::Runtime, sync::Mutex};
 
 use walletka_core::{
-    bdk::bitcoin::Network as BitcoinNetwork,
-    builder::WalletkaBuilder as BuilderSdk, 
+    bdk::bitcoin::Network,
+    builder::WalletkaBuilder as BuilderSdk,
+    enums::{WalletkaLayer, WalletkaAssetState, WalletkaAssetLocation},
+    types::{Amount, Currency, WalletkaAsset, WalletkaBalance},
     Walletka as WalletkaSdk,
-    types::{Amount, Currency, WalletkaBalance},
 };
 
 uniffi::include_scaffolding!("walletka-core");
-
-enum Network {
-    Bitcoin = 0,
-    Testnet = 1,
-    Signet = 2,
-    Regtest = 3,
-}
-
-impl Into<BitcoinNetwork> for Network {
-    fn into(self) -> BitcoinNetwork {
-        match self {
-            Network::Bitcoin => BitcoinNetwork::Bitcoin,
-            Network::Testnet => BitcoinNetwork::Testnet,
-            Network::Signet => BitcoinNetwork::Signet,
-            Network::Regtest => BitcoinNetwork::Regtest,
-        }
-    }
-}
 
 struct WalletkaBuilder {
     inner_builder: Mutex<BuilderSdk>,
@@ -73,7 +56,7 @@ impl WalletkaBuilder {
 
     fn set_network(&self, network: Network) {
         self.rt.block_on(async {
-            self.inner_builder.lock().await.set_network(network.into());
+            self.inner_builder.lock().await.set_network(network);
         });
     }
 
@@ -83,10 +66,19 @@ impl WalletkaBuilder {
         });
     }
 
-    fn build(&self) -> Arc<Walletka> {
-        let walletka = self.rt.block_on(async {
-            self.inner_builder.lock().await.build().await.unwrap()
+    fn set_electrum_url(&self, electrum_url: Option<String>) {
+        self.rt.block_on(async {
+            self.inner_builder
+                .lock()
+                .await
+                .set_electrum_url(electrum_url);
         });
+    }
+
+    fn build(&self) -> Arc<Walletka> {
+        let walletka = self
+            .rt
+            .block_on(async { self.inner_builder.lock().await.build().await.unwrap() });
 
         Arc::new(Walletka {
             inner_waller: Mutex::new(walletka),
@@ -125,5 +117,13 @@ impl Walletka {
                 .await
                 .unwrap()
         })
+    }
+
+    fn get_assets(&self) -> Vec<WalletkaAsset> {
+        let assets = self
+            .rt
+            .block_on(async { self.inner_waller.lock().await.get_assets().await.unwrap() });
+
+        assets
     }
 }

@@ -120,6 +120,10 @@ impl WalletkaBuilder {
         self.data_path = data_path;
     }
 
+    pub fn set_electrum_url(&mut self, electrum_url: Option<String>) {
+        self.electrum_url = electrum_url;
+    }
+
     pub async fn build(&self) -> Result<Walletka> {
         let database = get_database(self.database_store.clone(), Some(self.network.to_string()))
             .await
