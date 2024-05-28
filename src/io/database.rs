@@ -24,7 +24,11 @@ pub async fn get_database(store: DatabaseStore, ns: Option<String>) -> Result<Su
             db.use_ns(ns).use_db("core").await?;
             Ok(db)
         }
-        DatabaseStore::Memory => Ok(Surreal::new::<Mem>(()).await?),
+        DatabaseStore::Memory => {
+            let db = Surreal::new::<Mem>(()).await?;
+            db.use_ns(ns).use_db("core").await?;
+            Ok(db)
+        },
         DatabaseStore::Remote(_url) => todo!(),
     }
 }
