@@ -1,5 +1,6 @@
 namespace walletka_core {
-
+    string generate_mnemonic();
+    boolean validate_mnemonic(string mnemonic);
 };
 
 [NonExhaustive]
@@ -75,9 +76,13 @@ interface WalletkaBuilder {
 
 interface Walletka {
     [Async]
-    void sync();
+    void sync(boolean light);
     string get_bitcoin_address();
     WalletkaBalance get_balance(string? currency_symbol);
     sequence<WalletkaAsset> get_assets();
+    void claim_cashu_token(string token);
+    void create_rgb_utxos();
+    string create_rgb_invoice(string? asset_id, u64? amount, u32? duration_seconds, u8? min_confirmations, string? transport_url, boolean blinded);
+    string issue_rgb20_asset(string ticker, string name, u8 precision, u64 amount);
 };
 

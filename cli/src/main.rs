@@ -24,7 +24,9 @@ pub struct Args {
 #[derive(Subcommand, Debug, Clone)]
 enum Commands {
     Info,
-    Sync,
+    Sync {
+        light: Option<bool>,
+    },
     Address,
     Assets,
     Balance {
@@ -105,9 +107,9 @@ async fn main() -> Result<()> {
 
     match args.cmd {
         Commands::Info => todo!(),
-        Commands::Sync => {
+        Commands::Sync { light } => {
             debug!("Syncing Walletka");
-            walletka.sync().await?;
+            walletka.sync(light.unwrap_or(false)).await?;
         }
         Commands::Address => {
             let address = walletka.get_bitcoin_address()?;

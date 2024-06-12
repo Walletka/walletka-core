@@ -33,10 +33,10 @@ impl Walletka
     }
 
     /// Sync wallets
-    pub async fn sync(&mut self) -> Result<()> {
+    pub async fn sync(&mut self, light: bool) -> Result<()> {
         // Todo: Parallelize
         self.bitcoin_wallet.sync()?;
-        self.rgb_wallet.sync()?;
+        self.rgb_wallet.sync(None, light)?;
 
         Ok(())
     }

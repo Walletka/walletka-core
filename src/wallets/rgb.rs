@@ -1,8 +1,12 @@
+use std::collections::HashMap;
 use std::fs::{self};
+use std::sync::RwLock;
 
 use anyhow::{bail, Ok, Result};
 use log::info;
-use rgb_lib::wallet::{AssetNIA, DatabaseType, Online, ReceiveData, Unspent, Wallet, WalletData};
+use rgb_lib::wallet::{
+    AssetNIA, DatabaseType, Online, ReceiveData, RefreshFilter, Unspent, Wallet, WalletData,
+};
 use rgb_lib::{restore_keys, BitcoinNetwork};
 use tokio::task;
 
@@ -11,6 +15,7 @@ pub struct RgbWallet {
     online: Option<Online>,
     indexer_endpoint: Option<String>,
     default_transport_endpoint: Option<String>,
+    assets: RwLock<HashMap<String, AssetNIA>>, // TODO: RgbAsset struct
 }
 
 impl RgbWallet {
@@ -47,6 +52,7 @@ impl RgbWallet {
             online: None,
             indexer_endpoint,
             default_transport_endpoint,
+            assets: RwLock::new(HashMap::new()),
         })
     }
 
@@ -73,9 +79,94 @@ impl RgbWallet {
         Ok(())
     }
 
-    pub fn sync(&mut self) -> Result<()> {
+    fn get_cached_asset(&self, asset_id: String) -> Option<AssetNIA> {
+        self.assets.read().unwrap().get(&asset_id).cloned()
+    }
+
+    pub fn sync(&mut self, asset_id: Option<String>, light: bool) -> Result<bool> {
         self.ensure_online()?;
-        // Todo: refresh utxos and assets
+
+        let filter = if light {
+            vec![
+                RefreshFilter {
+                    status: rgb_lib::wallet::RefreshTransferStatus::WaitingCounterparty,
+                    incoming: true,
+                },
+                RefreshFilter {
+                    status: rgb_lib::wallet::RefreshTransferStatus::WaitingCounterparty,
+                    incoming: false,
+                },
+            ]
+        } else {
+            vec![]
+        };
+
+        let res = self
+            .inner_wallet
+            .refresh(self.online.clone().unwrap(), asset_id, filter)
+            .unwrap();
+
+        dbg!(&res);
+        Ok(!res.is_empty()) // TODO
+    }
+
+    pub fn update_assets(
+        &mut self,
+        refresh: bool,
+        update_transfers: bool,
+        firs_refresh: bool,
+    ) -> Result<()> {
+        if refresh && !firs_refresh {
+            self.sync(None, false)?;
+        }
+
+        let assets = self.get_rgb20_assets()?;
+
+        for asset in assets {
+            let mut next_update_transfers = update_transfers;
+            let mut asset_to_update = self.get_cached_asset(asset.asset_id.clone());
+
+            if asset_to_update.is_none() {
+                asset_to_update = Some(asset.clone());
+                next_update_transfers = true;
+                self.assets
+                    .write()
+                    .unwrap()
+                    .insert(asset.asset_id.clone(), asset.clone());
+            } else {
+                let mut asset_to_update_mut = asset_to_update.unwrap();
+                asset_to_update_mut.balance.spendable = asset.balance.spendable;
+                asset_to_update_mut.balance.settled = asset.balance.settled;
+                asset_to_update_mut.balance.future = asset.balance.future;
+
+                asset_to_update = Some(asset_to_update_mut);
+            }
+
+            self.update_asset(asset.asset_id, firs_refresh, next_update_transfers, None)?;
+        }
+
+        // Todo first app refresh
+
+        Ok(())
+    }
+
+    pub fn update_asset(
+        &mut self,
+        asset_id: String,
+        refresh: bool,
+        update_transfers: bool,
+        _update_transfers_filter: Option<String>,
+    ) -> Result<()> {
+        let mut call_list_transfers = update_transfers;
+        if refresh {
+            call_list_transfers = self.sync(Some(asset_id.clone()), false)? || call_list_transfers;
+            // Todo update balance
+        }
+
+        if call_list_transfers {
+            // Todo list transfers
+        }
+
         Ok(())
     }
 
@@ -137,7 +228,8 @@ impl RgbWallet {
 
         if transport_endpoints.is_empty() && self.default_transport_endpoint.is_some() {
             transport_endpoints.push(self.default_transport_endpoint.clone().unwrap());
-        } else {
+        } 
+        if transport_endpoints.is_empty() {
             bail!("No transport endpoint provided");
         }
 

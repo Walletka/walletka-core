@@ -80,7 +80,7 @@ impl From<AssetNIA> for WalletkaAsset {
             asset_location: WalletkaAssetLocation::Utxo {
                 loc: format!("{}", value.asset_id),
             },
-            asset_state: WalletkaAssetState::Unknown,
+            asset_state: WalletkaAssetState::Settled, // Todo
             amount: Amount::new(
                 value.balance.settled,
                 Currency::new(
